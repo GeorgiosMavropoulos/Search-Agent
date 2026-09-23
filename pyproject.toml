@@ -8,6 +8,7 @@ authors = [
 ]
 requires-python = ">=3.13"
 dependencies = [
+    "datasets>=5.0.1",
     "litellm>=1.83.0",
     "openai>=3.18.0",
     "pydantic>=2.13.5",
