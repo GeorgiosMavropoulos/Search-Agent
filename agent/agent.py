@@ -7,7 +7,19 @@ from litellm import acompletion
 import os
 import asyncio
 #import models
-from models.model import ExtractedInfo
+from models.model import GaiaOutput
+##download GAIA for evaluation
+from datasets import load_dataset
+import os
+#import prompts
+from prompts.prompts import prompts as pr
+
+
+##load level1 gaia problems
+level1_problems = load_dataset("gaia-benchmark/GAIA", "2023_level1", split="validation")
+
+
+
 ##agent class
 class Agent:
     def __init__(self):
@@ -16,37 +28,50 @@ class Agent:
      self.ollama_url = os.getenv("ollama_url")
      #create this array to store the messages in order to allow the agent to access them. Artificial memory :D 
      self.messages = [] 
-       #prompts
-     self.prompts = [
-         f"What is {i} + {i}?" for i in range(100)
-     ] 
-
+    
      #limit the agent to execute 10 concurrent requests only
      self.semaphore = asyncio.Semaphore(10)
      
+   
 
+     self.question = level1_problems[0]["Question"]
+     self.answer = level1_problems[0]["Final answer"]
 
     
+    
+    
       #messages class
-    async def messages_function(self,prompt: str) -> str:
+    async def messages_function(self) -> str:
             """LLM call with rate limiting and automatic retry."""
             async with self.semaphore:
                 #1st exchange
                 messages = [
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": pr.GAIAs_evaluation_prompt},
+             {"role": "user", "content": self.question},
         ]
 
-            response1 = await acompletion(
+                response = await acompletion(
                 model=f"ollama/{self.ollama_model}",
                 messages=messages,
                 num_retries=3,
-                api_base=self.ollama_url
+                api_base=self.ollama_url,
+                response_format=GaiaOutput #use GAIAOutput response's format
             )
                 #ai message     
-            return  response1.choices[0].message.content
-                #add assistant's response to the list
-                #self.messages.append({"role":"system","content":assistant_message1})
-                #print(assistant_message1)
+            finish_reason = response.choices[0].finish_reason #this is the extracted finish reason
+            content = response.choices[0].message.content###this is the message's content from the llm.
+
+            #return the appropriate output if finish_reason is refusal
+            if finish_reason == "refusal" or content is None:
+                return GaiaOutput(
+                    is_solvable= False,
+                    unsolvable_reason=f"Model refused to answer (finish_reason: {finish_reason})",
+                    final_answer= ""
+
+
+                )
+
+            return GaiaOutput.model_validate_json(content) ##validate that content is in its appropriate form
 
     
 
@@ -62,18 +87,15 @@ class Agent:
             self.messages.append({"role":"system","content":assistant_message2})
             print(assistant_message2)
 """
+    
 
     #call the agent
     async def chatbot(self):
-     # Execute all requests concurrently
-     # Even with 100 concurrent tasks, only 10 API calls run at a time
-     tasks = [self.messages_function(p) for p in self.prompts]
-     results = await asyncio.gather(*tasks,return_exceptions=True) #execute all tasks and return exceptions
-     #print the given prompts
-     for prompt, result in zip(self.prompts, results):
-         print(f"Prompt:{prompt}")
-         print(f"Result:{result}")
-         print(type(result))
+     # execute the messages function
+     prediction = await self.messages_function()
+
+     
+     print(prediction)
 
    
 
