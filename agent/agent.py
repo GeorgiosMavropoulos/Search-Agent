@@ -18,25 +18,35 @@ class Agent:
      self.messages = [] 
        #prompts
      self.prompts = [
-         "What is 2 + 2?",
-         "What is the capital of Japan?",
-         "Who wrote Romeo and Juliet?"
+         f"What is {i} + {i}?" for i in range(100)
      ] 
+
+     #limit the agent to execute 10 concurrent requests only
+     self.semaphore = asyncio.Semaphore(10)
      
 
 
     
       #messages class
     async def messages_function(self,prompt: str) -> str:
-            #1st exchange
-            self.messages.append({"role": "user", "content": prompt})
-            #user message
-            response1 = await acompletion(model=f"ollama/{self.ollama_model}",messages=self.messages)
-            #ai message     
+            """LLM call with rate limiting and automatic retry."""
+            async with self.semaphore:
+                #1st exchange
+                messages = [
+            {"role": "user", "content": prompt}
+        ]
+
+            response1 = await acompletion(
+                model=f"ollama/{self.ollama_model}",
+                messages=messages,
+                num_retries=3,
+                api_base=self.ollama_url
+            )
+                #ai message     
             return  response1.choices[0].message.content
-            #add assistant's response to the list
-            #self.messages.append({"role":"system","content":assistant_message1})
-            #print(assistant_message1)
+                #add assistant's response to the list
+                #self.messages.append({"role":"system","content":assistant_message1})
+                #print(assistant_message1)
 
     
 
@@ -56,13 +66,14 @@ class Agent:
     #call the agent
     async def chatbot(self):
      # Execute all requests concurrently
+     # Even with 100 concurrent tasks, only 10 API calls run at a time
      tasks = [self.messages_function(p) for p in self.prompts]
-     results = await asyncio.gather(*tasks) #execute all tasks
+     results = await asyncio.gather(*tasks,return_exceptions=True) #execute all tasks and return exceptions
      #print the given prompts
      for prompt, result in zip(self.prompts, results):
          print(f"Prompt:{prompt}")
          print(f"Result:{result}")
-     
+         print(type(result))
 
    
 
