@@ -5,6 +5,9 @@ load_dotenv(find_dotenv()) ##initialize load env to find .env
 from openai import OpenAI #import ollama chat
 from litellm import completion
 import os
+import asyncio
+#import models
+from models.model import ExtractedInfo
 ##agent class
 class Agent:
     def __init__(self):
@@ -17,16 +20,16 @@ class Agent:
       #messages class
     def messages_function(self):
             #1st exchange
-            self.messages.append({"role": "user", "content": "My name is george"})
+            self.messages.append({"role": "user", "content": "My name is John Smith, my email is john@example.com, and my phone is 555-1234."})
             #user message
-            response1 = completion(model=f"ollama/{self.ollama_model}",messages=self.messages)
+            response1 = completion(model=f"ollama/{self.ollama_model}",messages=self.messages,response_format=ExtractedInfo)
             #ai message     
             assistant_message1 = response1.choices[0].message.content
             #add assistant's response to the list
             self.messages.append({"role":"system","content":assistant_message1})
             print(assistant_message1)
      
-     
+            """
             #second exchange
             self.messages.append({"role": "user", "content": "What's my name?"})
             #user message
@@ -36,7 +39,7 @@ class Agent:
             #add assistant's response to the list
             self.messages.append({"role":"system","content":assistant_message2})
             print(assistant_message2)
-
+"""
 
     #call the agent
     def chatbot(self):
