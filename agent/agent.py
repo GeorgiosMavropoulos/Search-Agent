@@ -3,7 +3,7 @@
 from dotenv import load_dotenv, find_dotenv 
 load_dotenv(find_dotenv()) ##initialize load env to find .env
 from openai import OpenAI #import ollama chat
-from litellm import completion
+from litellm import acompletion
 import os
 import asyncio
 #import models
@@ -15,19 +15,31 @@ class Agent:
      self.ollama_model = os.getenv("ollama_model")
      self.ollama_url = os.getenv("ollama_url")
      #create this array to store the messages in order to allow the agent to access them. Artificial memory :D 
-     self.messages = []   
+     self.messages = [] 
+       #prompts
+     self.prompts = [
+         "What is 2 + 2?",
+         "What is the capital of Japan?",
+         "Who wrote Romeo and Juliet?"
+     ] 
+     
 
+
+    
       #messages class
-    def messages_function(self):
+    async def messages_function(self,prompt: str) -> str:
             #1st exchange
-            self.messages.append({"role": "user", "content": "My name is John Smith, my email is john@example.com, and my phone is 555-1234."})
+            self.messages.append({"role": "user", "content": prompt})
             #user message
-            response1 = completion(model=f"ollama/{self.ollama_model}",messages=self.messages,response_format=ExtractedInfo)
+            response1 = await acompletion(model=f"ollama/{self.ollama_model}",messages=self.messages)
             #ai message     
-            assistant_message1 = response1.choices[0].message.content
+            return  response1.choices[0].message.content
             #add assistant's response to the list
-            self.messages.append({"role":"system","content":assistant_message1})
-            print(assistant_message1)
+            #self.messages.append({"role":"system","content":assistant_message1})
+            #print(assistant_message1)
+
+    
+
      
             """
             #second exchange
@@ -42,8 +54,15 @@ class Agent:
 """
 
     #call the agent
-    def chatbot(self):
-     self.messages_function()
+    async def chatbot(self):
+     # Execute all requests concurrently
+     tasks = [self.messages_function(p) for p in self.prompts]
+     results = await asyncio.gather(*tasks) #execute all tasks
+     #print the given prompts
+     for prompt, result in zip(self.prompts, results):
+         print(f"Prompt:{prompt}")
+         print(f"Result:{result}")
+     
 
    
 
