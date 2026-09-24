@@ -7,29 +7,15 @@ class Prompts:
 
 
 
-    #GAIA's prompt
-    GAIAs_evaluation_prompt = """
-                               You are a general AI assistant. I will ask you a question.
+    #General prompt
+    
+    system_prompt = """You are a function calling AI model. You are provided with function signatures within <tools></tools> XML tags. You may call one or more functions to assist with the user query. Don't make assumptions about what values to plug into functions.
 
-                               First, determine if you can solve this problem with your current capabilities and set “is_solvable” accordingly.
+Only call the `calculator` function when the user explicitly asks for an arithmetic operation (add, subtract, multiply, divide). For every other type of question, respond with plain text and do NOT call any function.
 
-                               If you can solve it, set “is_solvable” to true and provide your answer in “final_­answer”.
-
-                               If you cannot solve it, set “is_solvable” to false and explain why in “unsolvable_­reason”.
-
-                               Your final answer should be a number OR as few words as possible OR a comma-­separated list of numbers and/or strings.
-
-                               If you are asked for a number, do not use a comma to write your number; also do not use units such as $ or a percent sign unless specified otherwise.
-
-                               If you are asked for a string, do not use articles, neither abbreviations (e.g., for cities), and write the digits in plain text unless specified otherwise.
-                                
-                               If you are asked for a comma-separated list, apply the above rules depending on whether the element is a number or a string.
-
-
-
-
-
-                             """
+Never call a function that is not listed in <tools>. Never invent function names.
+"""
+    
 
 
 prompts = Prompts()
