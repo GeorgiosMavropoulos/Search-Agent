@@ -7,17 +7,17 @@ from litellm import acompletion
 import os
 import asyncio
 #import models
-from models.model import GaiaOutput
-##download GAIA for evaluation
-from datasets import load_dataset
+
+
 import os
 #import prompts
 from prompts.prompts import prompts as pr
+import json
 
+##load available tools
+from tools_schemas.tools_schemas import CalculatorTool as calc
 
-##load level1 gaia problems
-level1_problems = load_dataset("gaia-benchmark/GAIA", "2023_level1", split="validation")
-
+##import tools
 
 
 ##agent class
@@ -27,75 +27,88 @@ class Agent:
      self.ollama_model = os.getenv("ollama_model")
      self.ollama_url = os.getenv("ollama_url")
      #create this array to store the messages in order to allow the agent to access them. Artificial memory :D 
-     self.messages = [] 
+     self.messages = [{"role": "system",
+            "content": pr.system_prompt},
+        {         
+         "role":"user","content":"What's the result of 1533 multiplied by 1?"
+       }] 
     
      #limit the agent to execute 10 concurrent requests only
      self.semaphore = asyncio.Semaphore(10)
      
    
-
-     self.question = level1_problems[0]["Question"]
-     self.answer = level1_problems[0]["Final answer"]
-
-    
-    
-    
-      #messages class
-    async def messages_function(self) -> str:
-            """LLM call with rate limiting and automatic retry."""
-            async with self.semaphore:
-                #1st exchange
-                messages = [
-            {"role": "user", "content": pr.GAIAs_evaluation_prompt},
-             {"role": "user", "content": self.question},
-        ]
-
-                response = await acompletion(
-                model=f"ollama/{self.ollama_model}",
-                messages=messages,
-                num_retries=3,
-                api_base=self.ollama_url,
-                response_format=GaiaOutput #use GAIAOutput response's format
-            )
-                #ai message     
-            finish_reason = response.choices[0].finish_reason #this is the extracted finish reason
-            content = response.choices[0].message.content###this is the message's content from the llm.
-
-            #return the appropriate output if finish_reason is refusal
-            if finish_reason == "refusal" or content is None:
-                return GaiaOutput(
-                    is_solvable= False,
-                    unsolvable_reason=f"Model refused to answer (finish_reason: {finish_reason})",
-                    final_answer= ""
+     ##define a list with the tool definition to feed it to the model
+     self.tools = [calc.calculator_definition]
 
 
-                )
+    #method to handle tool calls
+    def handle_tool_calls(self, ai_response) -> bool: 
+        #if model did not called a tool return false
+        if not ai_response.tool_calls:
+            return False
 
-            return GaiaOutput.model_validate_json(content) ##validate that content is in its appropriate form
 
-    
+        #if not Store assistant's tool call
+        self.messages.append({
+         "role": "assistant",
+         "content": ai_response.content  or None,
+          "tool_calls": ai_response.tool_calls
+         })
 
-     
-            """
-            #second exchange
-            self.messages.append({"role": "user", "content": "What's my name?"})
-            #user message
-            response2 = completion(model=f"ollama/{self.ollama_model}",messages=self.messages)
-            #ai message     
-            assistant_message2 = response2.choices[0].message.content
-            #add assistant's response to the list
-            self.messages.append({"role":"system","content":assistant_message2})
-            print(assistant_message2)
-"""
-    
+         #execut the called tools
+        for tool_call in ai_response.tool_calls:
+         tool_name = tool_call.function.name ##extract tool's name
+                   
+         function_params = json.loads( tool_call.function.arguments ) ##extract function's paremeters
+         ##if tool name is calculator perform the calculation
+         if tool_name == "calculator":
+           result = calc.calculator(**function_params)
+
+         #store the final result in the message
+        self.messages.append({
+                "role": "tool",
+                "tool_call_id": tool_call.id,
+                "content": str(result)
+            })
+
+        return True
+                                      
+                                       
+                   
 
     #call the agent
     async def chatbot(self):
-     # execute the messages function
-     prediction = await self.messages_function()
+     """LLM call with rate limiting and automatic retry."""
+     async with self.semaphore: #use semaphore to implement rate limiting
+       
+       response = await acompletion(model=f'ollama_chat/{self.ollama_model}', messages=self.messages,tools=self.tools)
+       
+       #extract the executed tool from the response
+       ai_response = response.choices[0].message
 
-     
-     print(prediction)
+       #define if a tool has been called
+       if self.handle_tool_calls(ai_response):     
+          #return the final response
+        final_response = await acompletion(model=f'ollama_chat/{self.ollama_model}', messages=self.messages)
+        answer = final_response.choices[0].message.content# store the answer
+        #append the answer in message history
+        self.messages.append({"role": "assistant", "content": answer})
+        print(f"Final answer: {answer}")
+        return answer
+
+       else:
+           #if no tools calls store the original answer
+           self.messages.append({"role": "assistant", "content": ai_response.content})
+           print(f"Final answer: {ai_response.content}")
+           return ai_response.content
+           
+
+
+       
+                          
+                        
+        
+    
 
    
 
