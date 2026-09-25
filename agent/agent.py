@@ -30,7 +30,7 @@ class Agent:
      self.messages = [{"role": "system",
             "content": pr.system_prompt},
         {         
-         "role":"user","content":"Who is Alexis Tsipras?"
+         "role":"user","content":"What's the output of 4/0?"
        }] 
     
      #limit the agent to execute 10 concurrent requests only
@@ -96,15 +96,7 @@ class Agent:
        #extract the executed tool from the response
        ai_response = response.choices[0].message
 
-       #test websearch
-       def search_web(query: str, max_results: int = 2) -> list:
-
-        response = self.tavily_client.search(query, max_results=max_results)
-        print(response)
-        return response.get("results")
-
-       #search web
-       search_web("Kipchoge's marathon world record")
+      
 
        #define if a tool has been called
        if self.handle_tool_calls(ai_response):  
@@ -119,14 +111,14 @@ class Agent:
         answer = final_response.choices[0].message.content# store the answer
         #append the answer in message history
         self.messages.append({"role": "assistant", "content": answer})
-        #print(f"Final answer: {answer}")
+        print(f"Final answer: {answer}")
         #print(f"Tool used:{answer.message.tool_calls}")
         return answer
 
        else:
            #if no tools calls store the original answer
            self.messages.append({"role": "assistant", "content": ai_response.content})
-           #print(f"Final answer: {ai_response.content}")
+           print(f"Final answer: {ai_response.content}")
            
            return ai_response.content
            
