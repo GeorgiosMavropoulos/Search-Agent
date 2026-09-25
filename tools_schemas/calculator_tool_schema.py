@@ -9,7 +9,7 @@ class CalculatorTool:
 
      
     #create the calculator function
-    def calculator(operator: Literal["add", "subtract", "multiply", "divide"],
+    def calculator(operator: Literal["add", "subtract", "multiply", "divide"],    
                 first_number: float, second_number: float):
         ##define the operations
         if operator == "add": #addition
@@ -28,16 +28,10 @@ class CalculatorTool:
 
 
      ##generate the schema for calculator's function
-CalculatorTool.calculator_definition = ToolDefinitions.function_to_tool_definition(
-    CalculatorTool.calculator
-)
+CalculatorTool.calculator_definition = ToolDefinitions.function_to_tool_definition(CalculatorTool.calculator)
 
 
-##create the web search tool
-class WebSearchTool:
-    def __init__(self):
-        pass
 
 
-    #method to implement basic websearch and return the results
+
 
