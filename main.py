@@ -7,8 +7,11 @@ async def main():
 
     #create an agent's object
     agent = Agent()
+
+    #send your question to the agent
+    question = "What's the ouput of 2 + 3?"
     #call the chatbot method to chat
-    await agent.chatbot()
+    await agent.chatbot(question)
 
 #execute main
 asyncio.run(main())
