@@ -30,7 +30,7 @@ class Agent:
      self.messages = [{"role": "system",
             "content": pr.system_prompt},
         {         
-         "role":"user","content":"What's the result of 1533 multiplied by 1?"
+         "role":"user","content":"Who is Alexis Tsipras?"
        }] 
     
      #limit the agent to execute 10 concurrent requests only
@@ -63,13 +63,15 @@ class Agent:
          ##if tool name is calculator perform the calculation
          if tool_name == "calculator":
            result = calc.calculator(**function_params)
+         else:
+           return ValueError(f"There is no such a tool with name:{tool_name}")
 
-         #store the final result in the message
-        self.messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "content": str(result)
-            })
+          #store the final result in the message
+         self.messages.append({
+                  "role": "tool",
+                  "tool_call_id": tool_call.id,
+                  "content": str(result)
+              })
 
         return True
                                       
@@ -78,28 +80,39 @@ class Agent:
 
     #call the agent
     async def chatbot(self):
+     
      """LLM call with rate limiting and automatic retry."""
      async with self.semaphore: #use semaphore to implement rate limiting
        
        response = await acompletion(model=f'ollama_chat/{self.ollama_model}', messages=self.messages,tools=self.tools)
+       ai_response = response.choices[0].message
+      
        
        #extract the executed tool from the response
        ai_response = response.choices[0].message
 
        #define if a tool has been called
-       if self.handle_tool_calls(ai_response):     
+       if self.handle_tool_calls(ai_response):  
+         
           #return the final response
         final_response = await acompletion(model=f'ollama_chat/{self.ollama_model}', messages=self.messages)
+       
+
+       
+
+       
         answer = final_response.choices[0].message.content# store the answer
         #append the answer in message history
         self.messages.append({"role": "assistant", "content": answer})
         print(f"Final answer: {answer}")
+        #print(f"Tool used:{answer.message.tool_calls}")
         return answer
 
        else:
            #if no tools calls store the original answer
            self.messages.append({"role": "assistant", "content": ai_response.content})
            print(f"Final answer: {ai_response.content}")
+           
            return ai_response.content
            
 
