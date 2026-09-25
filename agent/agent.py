@@ -6,16 +6,13 @@ from openai import OpenAI #import ollama chat
 from litellm import acompletion
 import os
 import asyncio
-#import models
-from tavily import TavilyClient#import tavily to implemenet web search
-
 import os
 #import prompts
 from prompts.prompts import prompts as pr
 import json
 
 ##load available tools
-from tools_schemas.tools_schemas import CalculatorTool as calc
+from tools_schemas.calculator_tool_schema import CalculatorTool as calc
 
 ##import tools
 
@@ -36,8 +33,7 @@ class Agent:
      #limit the agent to execute 10 concurrent requests only
      self.semaphore = asyncio.Semaphore(10)
 
-     #initialize tavily client
-     self.tavily_client = TavilyClient(os.getenv("TAVILY_API_KEY"))
+     
 
 
      
