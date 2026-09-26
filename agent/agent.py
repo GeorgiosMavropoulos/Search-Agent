@@ -16,6 +16,7 @@ import json
 from tools_schemas.calculator_tool_schema import CalculatorTool as calc
 from tools_schemas.websearch_tool_schema import WebSearch as w_search
 from tools_schemas.generate_tool_definitions import ToolDefinitions
+from tools_schemas.write_to_file_tool import WriteToFile as write
 ##import tools
 
 
@@ -32,7 +33,7 @@ class Agent:
      self.semaphore = asyncio.Semaphore(10)
 
      ##define a list with the tool definition to feed it to the model
-     self.tool_functions = [calc.calculator, w_search.web_search]
+     self.tool_functions = [calc.calculator, w_search.web_search,write.write_to_file]
 
      #create the tools registry
      self.tool_registry = {fn.__name__: fn for fn in self.tool_functions}
@@ -73,6 +74,7 @@ class Agent:
 
         #delegate into a variable LLM's message
         assistant_message = response.choices[0].message
+        print(f"Tool call:{assistant_message.tool_calls}")
         
         
 

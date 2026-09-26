@@ -7,10 +7,7 @@ import os
 class WebSearch:
     def __init__(self):
      pass
-    
-    
 
-    
 
     #web search method implementation. This method retrieves data from the web and return the results
     @staticmethod
