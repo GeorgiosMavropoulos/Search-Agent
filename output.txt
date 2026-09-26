@@ -1,1 +1,1 @@
-Today is a new day
+This is a sample text to be written into a file.

@@ -7,13 +7,13 @@ class WriteToFile:
 
     #write to file method
     @staticmethod
-    def write_to_file(text):
+    def generate_code_file(text,filename):
         """Use this method to write into a txt file"""
         try:
-            with open("output.txt","w",encoding="utf-8") as f:
+            with open(filename,"w",encoding="utf-8") as f:
                 f.write(text) ##write the text
                 #response
-                result = "File has been written with success"
+                result = "File {filename} was created with success"
                 return result
         except Exception as e:
             return f"Error while trying to write into the txt file: {e}"
@@ -21,4 +21,4 @@ class WriteToFile:
             f.close() ##close the write mode whatever happens
 
 ##define a tool definition
-WriteToFile.write_to_file_definition =   ToolDefinitions.function_to_tool_definition(WriteToFile.write_to_file)
+WriteToFile.write_to_file_definition =   ToolDefinitions.function_to_tool_definition(WriteToFile.generate_code_file)

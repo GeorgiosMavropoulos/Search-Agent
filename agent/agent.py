@@ -33,7 +33,7 @@ class Agent:
      self.semaphore = asyncio.Semaphore(10)
 
      ##define a list with the tool definition to feed it to the model
-     self.tool_functions = [calc.calculator, w_search.web_search,write.write_to_file]
+     self.tool_functions = [calc.calculator, w_search.web_search,write.generate_code_file]
 
      #create the tools registry
      self.tool_registry = {fn.__name__: fn for fn in self.tool_functions}
