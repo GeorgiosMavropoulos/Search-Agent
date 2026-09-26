@@ -9,7 +9,7 @@ async def main():
     agent = Agent()
 
     #send your question to the agent
-    question = "What's the ouput of 2 + 3?"
+    question = "Please save in a txt file the text `Today is a new day`"
     #call the chatbot method to chat
     await agent.chatbot(question)
 
