@@ -1,14 +1,18 @@
 ### this file contains the class with the method which allow the user 
-from .generate_tool_definitions import ToolDefinitions
 
 class WriteToTxt:
     def __init__(self):
         pass
 
-
     #write to file method
     @staticmethod
     def write_to_file(txt:str,filename):
+        """Save text content to a .txt file.
+
+         Args:
+        txt: The text to write to the file.
+        filename: The name of the text file, e.g. 'notes.txt'.
+        """
         ## open the file
         try:
 
@@ -22,7 +26,3 @@ class WriteToTxt:
         finally:
           f.close() ##close the write mode whatever happens
 
-
-##create tool's definition
-WriteToTxt.write_to_text_definitions = ToolDefinitions.function_to_tool_definition(WriteToTxt.write_to_file)
-                

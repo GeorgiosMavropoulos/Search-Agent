@@ -1,7 +1,8 @@
 ### tool class containing all tools and schemas
-import inspect #import this module to automatically create tool definitions
+
 from typing import Literal, get_args, get_origin
-from .generate_tool_definitions import ToolDefinitions
+
+
 class CalculatorTool:
     def __init__(self):
         pass
@@ -11,6 +12,24 @@ class CalculatorTool:
     #create the calculator function
     def calculator(operator: Literal["add", "subtract", "multiply", "divide"],    
                 first_number: float, second_number: float):
+        """Perform a basic arithmetic operation on two numbers.
+        Args:
+
+        operator: The arithmetic operation to perform.
+            Must be one of: "add", "subtract", "multiply", or "divide".
+        first_number: The first number used in the operation.
+        second_number: The second number used in the operation.
+
+        Returns:
+        The result of the arithmetic operation.
+
+         Raises:
+        ValueError: If the operator is unsupported or if division by zero
+                    is attempted.
+
+        
+        
+         """
         ##define the operations
         if operator == "add": #addition
             return first_number + second_number
@@ -27,8 +46,6 @@ class CalculatorTool:
             raise ValueError(f"Unsupported operator: {operator}")
 
 
-     ##generate the schema for calculator's function
-CalculatorTool.calculator_definition = ToolDefinitions.function_to_tool_definition(CalculatorTool.calculator)
 
 
 
