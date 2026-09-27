@@ -1,5 +1,5 @@
 #### this file contains the class with the method that enables the agent to write into the file
-from .generate_tool_definitions import ToolDefinitions
+
 
 class GenerateCodeFile:
     def __init__(self):
@@ -8,7 +8,15 @@ class GenerateCodeFile:
     #write to file method
     @staticmethod
     def generate_code_file(text,filename):
-        """Use this method to write into a txt file"""
+        """Generate and save code content to a file.
+            Args:
+            text: The source code to write into the file.
+            filename: The name of the output file, including the appropriate
+                  file extension, e.g. 'main.py', 'script.js', or 'index.html'.
+        Returns:
+        A message indicating whether the file was created successfully.
+        
+        """
         try:
             with open(filename,"w",encoding="utf-8") as f:
                 f.write(text) ##write the text
@@ -20,5 +28,4 @@ class GenerateCodeFile:
         finally:
             f.close() ##close the write mode whatever happens
 
-##define a tool definition
-GenerateCodeFile.write_to_file_definition =   ToolDefinitions.function_to_tool_definition(GenerateCodeFile.generate_code_file)
+
