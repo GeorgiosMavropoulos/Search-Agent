@@ -13,3 +13,11 @@ class GaiaOutput(BaseModel):
      is_solvable: bool
      unsolvable_reason: str = ""
      final_answer: str = ""
+
+
+
+#Model for chatresponse through the api
+from pydantic import BaseModel
+
+class QuestionRequest(BaseModel):
+    question: str
