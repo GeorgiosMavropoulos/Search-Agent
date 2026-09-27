@@ -9,7 +9,29 @@ async def main():
     agent = Agent()
 
     #send your question to the agent
-    question = "Please generate a python file containing code to print hello world"
+    question = """
+Create a SQL file named customers.sql.
+
+The file must contain a CREATE TABLE statement for a table named customers
+with the following columns:
+
+1. id:
+   - INT
+   - PRIMARY KEY
+   - AUTO_INCREMENT
+
+2. name:
+   - CHAR(100)
+   - NOT NULL
+
+3. phone_number:
+   - INT
+   - NOT NULL
+   - The phone number should have a maximum length of 10 digits.
+
+Do not execute the SQL.
+Only generate the SQL code and save it into the customers.sql file.
+"""
     #call the chatbot method to chat
     await agent.chatbot(question)
 

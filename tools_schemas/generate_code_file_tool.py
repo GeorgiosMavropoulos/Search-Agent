@@ -1,7 +1,7 @@
 #### this file contains the class with the method that enables the agent to write into the file
 from .generate_tool_definitions import ToolDefinitions
-from pathlib import Path
-class WriteToFile:
+
+class GenerateCodeFile:
     def __init__(self):
         pass
 
@@ -21,4 +21,4 @@ class WriteToFile:
             f.close() ##close the write mode whatever happens
 
 ##define a tool definition
-WriteToFile.write_to_file_definition =   ToolDefinitions.function_to_tool_definition(WriteToFile.generate_code_file)
+GenerateCodeFile.write_to_file_definition =   ToolDefinitions.function_to_tool_definition(GenerateCodeFile.generate_code_file)
