@@ -14,9 +14,17 @@ import json
 
 ##load available tools
 from tools_schemas.calculator_tool_schema import CalculatorTool as calc
+
+#load websearch tool
 from tools_schemas.websearch_tool_schema import WebSearch as w_search
+
+#load generate tool definitions
 from tools_schemas.generate_tool_definitions import ToolDefinitions
-from tools_schemas.write_to_file_tool import WriteToFile as write
+
+#impor the class with the method generate code file
+from tools_schemas.generate_code_file_tool import GenerateCodeFile as generate_code
+#import the class with the method write to txt
+from tools_schemas.save_to_txt_tool import WriteToTxt as write_txt
 ##import tools
 
 
@@ -33,7 +41,7 @@ class Agent:
      self.semaphore = asyncio.Semaphore(10)
 
      ##define a list with the tool definition to feed it to the model
-     self.tool_functions = [calc.calculator, w_search.web_search,write.generate_code_file]
+     self.tool_functions = [calc.calculator, w_search.web_search,generate_code.generate_code_file,write_txt.write_to_file]
 
      #create the tools registry
      self.tool_registry = {fn.__name__: fn for fn in self.tool_functions}
