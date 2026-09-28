@@ -14,12 +14,10 @@ import json
 
 ##load available tools
 from tools_schemas.calculator_tool_schema import CalculatorTool as calc
-
+from mcp_client_launcher import client
 #load websearch tool
 from tools_schemas.websearch_tool_schema import WebSearch as w_search
 
-#load generate tool definitions
-from tools_schemas.generate_tool_definitions import ToolDefinitions
 
 #impor the class with the method generate code file
 from tools_schemas.generate_code_file_tool import GenerateCodeFile as generate_code
@@ -46,8 +44,24 @@ class Agent:
      #create the tools registry
      self.tool_registry = {fn.__name__: fn for fn in self.tool_functions}
 
-     ##access the tool definitions
-     self.tool_definitions = [ToolDefinitions.function_to_tool_definition(fn) for fn in self.tool_functions]
+    
+
+
+     ### return the mcp description to compatible format for the agent
+    def mcp_tools_description_format(mcp_tools) -> list[dict]:
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": tool.name,
+                    "description": tool.description or "",
+                    "parameters": tool.input_schema,
+                },
+            }
+            for tool in mcp_tools.tools
+        ]
+
+      
 
 
      ##define a function to execute tools and return their results
@@ -72,7 +86,14 @@ class Agent:
        
       #create a loop to send back the updated information to the LLM
       while True:
-        
+       ##start the session with the mcp client
+       async with client() as session:
+
+        tools = await session.list_tools() ##make the tools available to the agent
+
+         ##access the tool definitions through the mcp tool format converter
+        self.tool_definitions = Agent.mcp_tools_description_format(tools)
+
         response = await acompletion(
             model=f'ollama_chat/{self.ollama_model}',
             messages=self.messages,
@@ -83,7 +104,7 @@ class Agent:
         #delegate into a variable LLM's message
         assistant_message = response.choices[0].message
         print(f"Tool call:{assistant_message.tool_calls}")
-        
+              
         
 
         #if a tool was called return the final response with tools
