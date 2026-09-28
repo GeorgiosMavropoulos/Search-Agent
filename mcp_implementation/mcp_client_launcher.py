@@ -12,7 +12,7 @@ load_dotenv()
 ##create an instance of std input output server parameters
 server_params = StdioServerParameters(
     command="uv",
-    args=["run", "python", "mcp_server.py"]
+    args=["run", "python", "-m", "mcp_implementation.mcp_server"]
    
 )
 
