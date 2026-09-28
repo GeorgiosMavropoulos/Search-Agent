@@ -1,6 +1,7 @@
 from fastapi import APIRouter, status, HTTPException
 from agent.agent import Agent
 from models.model import QuestionRequest
+import traceback
 
 
 router = APIRouter(
@@ -23,6 +24,7 @@ async def interact(request: QuestionRequest):
         }
     ##return  an exception is sth goes wrong
     except Exception as e:
+        traceback.print_exc()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error while establishing connection with the agent: {e}"
