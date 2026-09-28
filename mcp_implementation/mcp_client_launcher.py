@@ -5,7 +5,7 @@ from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 from dotenv import load_dotenv
 from contextlib import asynccontextmanager
-
+from function_tool.function_tool import FunctionTool,BaseTool
 #load environmental variables
 load_dotenv()
 
@@ -16,14 +16,54 @@ server_params = StdioServerParameters(
    
 )
 
+
+##this method creates the mcp tools using the FunctionTool wrapper I created
+def _create_mcp_tool(mcp_tool, session) -> FunctionTool:
+    """Create a FunctionTool that wraps an MCP tool."""
+
+    async def call_mcp(**kwargs):      
+       result = await session.call_tool(mcp_tool.name, kwargs)
+       print(result)
+       return result
+
+    tool_definition = {
+        "type": "function",
+        "function": {
+            "name": mcp_tool.name,
+            "description": mcp_tool.description,
+            "parameters": mcp_tool.input_schema,
+        }
+    }
+
+    return FunctionTool(
+        func=call_mcp,
+        name=mcp_tool.name,
+        description=mcp_tool.description,
+        tool_definition=tool_definition
+    )
+
+##this function lists all available tools
+async def load_mcp_tools(session) -> list[BaseTool]:
+    """Load tools from an MCP server and convert to FunctionTools."""
+    tools = []
+
+    
+    mcp_tools = await session.list_tools()
+
+    for mcp_tool in mcp_tools.tools:
+       func_tool = _create_mcp_tool(mcp_tool, session)
+       tools.append(func_tool)
+
+    
+    return tools
+
 # The following function initializes a session with the mcp server, enabling read and write streams
 @asynccontextmanager
 async def client():
+   
     async with stdio_client(server_params) as (read_stream, write_stream):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize() 
-            yield session
             
-    
-
+            yield session ##keep session active
             
