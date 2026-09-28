@@ -14,7 +14,7 @@ import json
 
 ##load available tools
 from tools_schemas.calculator_tool_schema import CalculatorTool as calc
-from mcp_client_launcher import client
+from mcp_implementation.mcp_client_launcher import client
 #load websearch tool
 from tools_schemas.websearch_tool_schema import WebSearch as w_search
 
