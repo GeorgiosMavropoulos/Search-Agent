@@ -2,15 +2,9 @@
 #import dotenv
 from dotenv import load_dotenv, find_dotenv 
 load_dotenv(find_dotenv()) ##initialize load env to find .env
-from openai import OpenAI #import ollama chat
-from litellm import acompletion
-import os
-import asyncio
-import os
+
 #import prompts
 from prompts.prompts import prompts as pr
-
-import json
 
 ##load available tools
 from tools_schemas.calculator_tool_schema import CalculatorTool as calc
@@ -18,113 +12,78 @@ from mcp_implementation.mcp_client_launcher import client
 #load websearch tool
 from tools_schemas.websearch_tool_schema import WebSearch as w_search
 
+from agent_result import AgentResult
+from helper_methods import AgentHelperMethod
 
 #impor the class with the method generate code file
 from tools_schemas.generate_code_file_tool import GenerateCodeFile as generate_code
 #import the class with the method write to txt
 from tools_schemas.save_to_txt_tool import WriteToTxt as write_txt
 ##import tools
+from llm_communication_layer.communication_layer import LLMRequest, LlmClient, LlmResponse
+from models.model import BaseTool,Message
+from typing import List
+from execution_context.execution_context import ExecutionContext,Event
 
 
 ##agent class
 class Agent:
-    def __init__(self):
-     ##load the model and api url           
-     self.ollama_model = os.getenv("ollama_model")
-     self.ollama_url = os.getenv("ollama_url")
-     #create this array to store the messages in order to allow the agent to access them. Artificial memory :D 
-     self.messages = []    
+    def __init__( #create agent's constructor
+        self,
+        model: LlmClient,
+        tools: List[BaseTool] = None,
+        instructions: str = "",
+        max_steps: int = 10,
+        name: str = "agent",): 
+     self.model = model
+     self.instructions = instructions # System prompt that defines the agent’s behavior
+     self.max_steps = max_steps # max steps the agent can take to solve a problem. this helps us to prevent infinity loops
+     self.name = name
+     self.tools = self._setup_tools(tools or []) #_setup_tools prepares tool list for use
+    
+    #set up agent tools 
+    def _setup_tools(self, tools: List[BaseTool]) -> List[BaseTool]:
+      return tools
 
-     #limit the agent to execute 10 concurrent requests only
-     self.semaphore = asyncio.Semaphore(10)
 
-     ##define a list with the tool definition to feed it to the model
-     self.tool_functions = [calc.calculator, w_search.web_search,generate_code.generate_code_file,write_txt.write_to_file]
+    #run method is the main entry point which creates the execution environment, manages the think–act loop, and returns the result.
+    async def run( self, user_input: str, context: ExecutionContext = None) -> AgentResult:
+         # Create or reuse context
+      if context is None:
+        context = ExecutionContext()
 
-     #create the tools registry
-     self.tool_registry = {fn.__name__: fn for fn in self.tool_functions}    
+      #add user input as the first event
+      user_event = Event(execution_id=context.execution_id,author="user",content=[Message(role="user",content=user_input)])
+
+      context.add_event(user_event) #add user event into the event list
+
+      # Execute steps until completion or max steps reached
+      while not context.final_result and context.current_step < self.max_steps:
+         await self.step(context) #add this step into the execution context
+
+         # Check if the last event is a final response
+         last_event = context.events[-1]
+         if AgentHelperMethod._is_final_response(last_event):
+            context.final_result = AgentHelperMethod._extract_final_result(last_event)
+
+      return AgentResult(output=context.final_result, context=context) ##return the agent's response
 
 
-    #agent loop
-    async def agent_loop(self,question):
-     
-      self.messages = [
-        {"role": "system", "content": pr.system_prompt},
-        {"role": "user", "content": question}
-    ]
+#test the agent
+async def test_agent():
+    result = await Agent.run("What is 1234 * 5678?")
+    print(result.output)                      # "7006652"
+    print(result.context.current_step) 
 
-       ##start the session with the mcp client
-      async with client() as response_data:
+      
 
-        session, tools = response_data       
-           #create a loop to send back the updated information to the LLM
-        while True:
 
-            response = await acompletion(
-                model=f'ollama_chat/{self.ollama_model}',
-                messages=self.messages,
-                tools=tools
-                
-            )
-
-            #delegate into a variable LLM's message
-            assistant_message = response.choices[0].message
-            print(f"Tool call:{assistant_message.tool_calls}")
-
-            for tool in tools:
-               function_name = tool.name
-
-            #if a tool was called return the final response with tools
-            if self.handle_tool_calls(assistant_message,function_name):
-
-             continue##return to the loop
-
-            else:
-             #if no tools calls store the original answer
-             self.messages.append({"role": "assistant", "content": assistant_message.content})
-                                    
-            return assistant_message.content
-
-    #method to handle tool calls
-    def handle_tool_calls(self, ai_response,tools) -> bool: 
-        #if model did not called a tool return false
-        if not ai_response.tool_calls:
-            return False
-
-        for tool in ai_response.tool_calls:
-           for available_tool in tools:
-              if available_tool.name == tool.function.name:
-                 available_tool.execute(tool)
-
-        if ai_response.tool_calls:
-           self.messages.append({
-            "role": "assistant",
-            "content": ai_response.content or None,
-            "tool_calls": ai_response.tool_calls
-        })
-           for tool_call in ai_response.tool_calls:
-                tool_result = self.tool_execution(self.tool_registry, tool_call)
-                ##append the messages into message list
-                self.messages.append({
-                    "role": "tool", 
-                    "content": str(tool_result), 
-                    "tool_call_id": tool_call.id
-                })
-        
-        return True
-                                      
-
-    #call the agent
-    async def chatbot(self,question: str):
-     
-     """LLM call with rate limiting and automatic retry."""
-     async with self.semaphore: #use semaphore to implement rate limiting
        
-       
-          #return the final response
-        final_response = await self.agent_loop(question)
-        
-        return final_response
+   
+    
+    
+
+   
            
 
 
