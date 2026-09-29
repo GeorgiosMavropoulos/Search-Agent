@@ -17,14 +17,23 @@ server_params = StdioServerParameters(
 )
 
 
+def _extract_text_content(result) -> str:
+    """Extract plain text from an MCP CallToolResult."""
+    parts = []
+    for item in getattr(result, "content", []) or []:
+        text = getattr(item, "text", None)
+        if text is not None:
+            parts.append(text)
+    return "\n".join(parts)
+
+
 ##this method creates the mcp tools using the FunctionTool wrapper I created
 def _create_mcp_tool(mcp_tool, session) -> FunctionTool:
     """Create a FunctionTool that wraps an MCP tool."""
 
     async def call_mcp(**kwargs):      
        result = await session.call_tool(mcp_tool.name, kwargs)
-       print(result)
-       return result
+       return _extract_text_content(result)
 
     tool_definition = {
         "type": "function",
@@ -64,6 +73,7 @@ async def client():
     async with stdio_client(server_params) as (read_stream, write_stream):
         async with ClientSession(read_stream, write_stream) as session:
             await session.initialize() 
-            
-            yield session ##keep session active
+            ##load all the available mcp tools
+            tools = await load_mcp_tools(session)
+            yield (session, tools) #keep session alive, and tools available as long as the session is active
             
