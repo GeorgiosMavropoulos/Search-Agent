@@ -42,38 +42,7 @@ class Agent:
      self.tool_functions = [calc.calculator, w_search.web_search,generate_code.generate_code_file,write_txt.write_to_file]
 
      #create the tools registry
-     self.tool_registry = {fn.__name__: fn for fn in self.tool_functions}
-
-    
-
-
-     ### return the mcp description to compatible format for the agent
-    def mcp_tools_description_format(mcp_tools) -> list[dict]:
-        return [
-            {
-                "type": "function",
-                "function": {
-                    "name": tool.name,
-                    "description": tool.description or "",
-                    "parameters": tool.input_schema,
-                },
-            }
-            for tool in mcp_tools.tools
-        ]
-
-      
-
-
-     ##define a function to execute tools and return their results
-    def tool_execution(self,tools, tool_call):
-      ##get executed tool's name
-      function_name = tool_call.function.name
-      #get parameters to pass as arguments to the tools
-      function_args = json.loads(tool_call.function.arguments)
-      #delegate tool's result into a variable
-      tool_result = tools[function_name](**function_args)
-      #return the result
-      return tool_result
+     self.tool_registry = {fn.__name__: fn for fn in self.tool_functions}    
 
 
     #agent loop
@@ -83,46 +52,49 @@ class Agent:
         {"role": "system", "content": pr.system_prompt},
         {"role": "user", "content": question}
     ]
-       
-      #create a loop to send back the updated information to the LLM
-      while True:
+
        ##start the session with the mcp client
-       async with client() as session:
+      async with client() as response_data:
 
-        tools = await session.list_tools() ##make the tools available to the agent
+        session, tools = response_data       
+           #create a loop to send back the updated information to the LLM
+        while True:
 
-         ##access the tool definitions through the mcp tool format converter
-        self.tool_definitions = Agent.mcp_tools_description_format(tools)
+            response = await acompletion(
+                model=f'ollama_chat/{self.ollama_model}',
+                messages=self.messages,
+                tools=tools
+                
+            )
 
-        response = await acompletion(
-            model=f'ollama_chat/{self.ollama_model}',
-            messages=self.messages,
-            tools=self.tool_definitions
-            
-        )
+            #delegate into a variable LLM's message
+            assistant_message = response.choices[0].message
+            print(f"Tool call:{assistant_message.tool_calls}")
 
-        #delegate into a variable LLM's message
-        assistant_message = response.choices[0].message
-        print(f"Tool call:{assistant_message.tool_calls}")
-              
-        
+            for tool in tools:
+               function_name = tool.name
 
-        #if a tool was called return the final response with tools
-        if self.handle_tool_calls(assistant_message):
+            #if a tool was called return the final response with tools
+            if self.handle_tool_calls(assistant_message,function_name):
 
-           continue##return to the loop
+             continue##return to the loop
 
-        else:
-           #if no tools calls store the original answer
-           self.messages.append({"role": "assistant", "content": assistant_message.content})
-                                 
-           return assistant_message.content
+            else:
+             #if no tools calls store the original answer
+             self.messages.append({"role": "assistant", "content": assistant_message.content})
+                                    
+            return assistant_message.content
 
     #method to handle tool calls
-    def handle_tool_calls(self, ai_response) -> bool: 
+    def handle_tool_calls(self, ai_response,tools) -> bool: 
         #if model did not called a tool return false
         if not ai_response.tool_calls:
             return False
+
+        for tool in ai_response.tool_calls:
+           for available_tool in tools:
+              if available_tool.name == tool.function.name:
+                 available_tool.execute(tool)
 
         if ai_response.tool_calls:
            self.messages.append({
@@ -151,7 +123,7 @@ class Agent:
        
           #return the final response
         final_response = await self.agent_loop(question)
-        print(final_response)
+        
         return final_response
            
 
@@ -163,8 +135,3 @@ class Agent:
     
 
    
-
-
-
-
-

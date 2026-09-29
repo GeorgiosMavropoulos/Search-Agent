@@ -1,8 +1,14 @@
 ### Define models to enable structured output both for llms and user's input
 from pydantic import BaseModel,Field
-from typing import Literal, Union, List
+from typing import Literal, Union, Callable,List, Optional,Dict,Any
 import uuid
 from datetime import datetime
+from abc import ABC,abstractmethod
+from execution_context.execution_context import ExecutionContext
+import inspect
+from tool_definitions.tool_definitions import ToolDefinitions
+from litellm import acompletion
+
 ## create extracted info class for testing
 class ExtractedInfo(BaseModel):
      name: str
@@ -29,6 +35,31 @@ class Message(BaseModel):
     type: Literal["message"] = "message"
     role: Literal["system", "user", "assistant"]
     content: str
+
+
+class BaseTool(ABC):
+    """Abstract base class for all tools."""
+
+    def __init__(
+        self, 
+        name: str = None, 
+        description: str = None, 
+        tool_definition: Dict[str, Any] = None,
+    ):
+        self.name = name or self.__class__.__name__
+        self.description = description or self.__doc__ or ""
+        self._tool_definition = tool_definition
+
+    @property
+    def tool_definition(self) -> Dict[str, Any] | None:
+        return self._tool_definition
+
+    @abstractmethod
+    async def execute(self, context: ExecutionContext, **kwargs) -> Any:
+        pass
+
+    async def __call__(self, context: ExecutionContext, **kwargs) -> Any:
+        return await self.execute(context, **kwargs)
 
 
 #The following classes help for debugging and create an execution context for the agent
@@ -61,4 +92,49 @@ class Event(BaseModel):
     timestamp: float = Field(default_factory=lambda: datetime.now().timestamp()) 
     author: str  # "user" or agent name
     content: List[ContentItem] = Field(default_factory=list)##store which method was called
+
+
+
+#Base tool function
+class FunctionTool(BaseTool):
+    """Wraps a Python function as a BaseTool."""
+
+    def __init__(
+        self, 
+        func: Callable, 
+        name: str = None, 
+        description: str = None,
+        tool_definition: Dict[str, Any] = None
+    ):
+        self.func = func
+        self.needs_context = 'context' in inspect.signature(func).parameters
+
+        name = name or func.__name__
+        description = description or (func.__doc__ or "").strip()
+        tool_definition = tool_definition or self._generate_definition()
+
+        super().__init__(
+            name=name, 
+            description=description, 
+            tool_definition=tool_definition
+        )
+
+    async def execute(self, context: ExecutionContext, **kwargs) -> Any:
+        """Execute the wrapped function."""
+        if self.needs_context:
+            result = self.func(context=context, **kwargs)
+        else:
+            result = self.func(**kwargs)
+
+        # Handle both sync and async functions
+        if inspect.iscoroutine(result):
+            return await result
+        return result
+
+    def _generate_definition(self) -> Dict[str, Any]:
+        """Generate tool definition from function signature."""
+        parameters = ToolDefinitions.function_to_input_schema(self.func)
+        return ToolDefinitions.format_tool_definition(self.name, self.description, parameters)
+
+
 
