@@ -1,14 +1,15 @@
 ### Define models to enable structured output both for llms and user's input
 from pydantic import BaseModel,Field
-from typing import Literal, Union, Callable,List, Optional,Dict,Any
+from typing import Literal, Union, Callable,List, Dict,Any,TYPE_CHECKING
 import uuid
 from datetime import datetime
 from abc import ABC,abstractmethod
-from execution_context.execution_context import ExecutionContext
+
 import inspect
 from tool_definitions.tool_definitions import ToolDefinitions
 from litellm import acompletion
-
+if TYPE_CHECKING:
+    from execution_context.execution_context import ExecutionContext
 ## create extracted info class for testing
 class ExtractedInfo(BaseModel):
      name: str
@@ -55,10 +56,10 @@ class BaseTool(ABC):
         return self._tool_definition
 
     @abstractmethod
-    async def execute(self, context: ExecutionContext, **kwargs) -> Any:
+    async def execute(self, context: 'ExecutionContext', **kwargs) -> Any:
         pass
 
-    async def __call__(self, context: ExecutionContext, **kwargs) -> Any:
+    async def __call__(self, context:'ExecutionContext', **kwargs) -> Any:
         return await self.execute(context, **kwargs)
 
 
@@ -119,7 +120,7 @@ class FunctionTool(BaseTool):
             tool_definition=tool_definition
         )
 
-    async def execute(self, context: ExecutionContext, **kwargs) -> Any:
+    async def execute(self, context: 'ExecutionContext', **kwargs) -> Any:
         """Execute the wrapped function."""
         if self.needs_context:
             result = self.func(context=context, **kwargs)

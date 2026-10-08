@@ -5,23 +5,21 @@ load_dotenv(find_dotenv()) ##initialize load env to find .env
 
 #import prompts
 from prompts.prompts import prompts as pr
-
+import asyncio
 ##load available tools
-from tools_schemas.calculator_tool_schema import CalculatorTool as calc
-from mcp_implementation.mcp_client_launcher import client
-#load websearch tool
-from tools_schemas.websearch_tool_schema import WebSearch as w_search
 
-from agent_result import AgentResult
-from helper_methods import AgentHelperMethod
+
+
+from .agent_result import AgentResult
+from .helper_methods import AgentHelperMethod
 
 #impor the class with the method generate code file
 from tools_schemas.generate_code_file_tool import GenerateCodeFile as generate_code
 #import the class with the method write to txt
-from tools_schemas.save_to_txt_tool import WriteToTxt as write_txt
+
 ##import tools
 from llm_communication_layer.communication_layer import LLMRequest, LlmClient, LlmResponse
-from models.model import BaseTool,Message
+from models.model import BaseTool,Message,ToolCall,ToolResult
 from typing import List
 from execution_context.execution_context import ExecutionContext,Event
 
@@ -48,7 +46,7 @@ class Agent:
 
     #run method is the main entry point which creates the execution environment, manages the think–act loop, and returns the result.
     async def run( self, user_input: str, context: ExecutionContext = None) -> AgentResult:
-         # Create or reuse context
+         #create or reuse context
       if context is None:
         context = ExecutionContext()
 
@@ -57,23 +55,43 @@ class Agent:
 
       context.add_event(user_event) #add user event into the event list
 
-      # Execute steps until completion or max steps reached
+      #execute steps until completion or max steps reached
       while not context.final_result and context.current_step < self.max_steps:
          await self.step(context) #add this step into the execution context
 
-         # Check if the last event is a final response
+         #check if the last event is a final response
          last_event = context.events[-1]
          if AgentHelperMethod._is_final_response(last_event):
             context.final_result = AgentHelperMethod._extract_final_result(last_event)
 
       return AgentResult(output=context.final_result, context=context) ##return the agent's response
 
+    #helper method to detect whether the response from the llm is the final one
+    def is_final_response(self,event:Event) -> bool:
+      """Check if this event contains a final response."""
+      #check if the agent made any tool call
+      has_tool_calls =  any(isinstance(c, ToolCall) for c in event.content)
+      #check if the agent got any tool results
+      has_tool_results = any(isinstance(c,ToolResult)for c in event.content)
+      return not has_tool_calls and not has_tool_results
 
-#test the agent
-async def test_agent():
-    result = await Agent.run("What is 1234 * 5678?")
-    print(result.output)                      # "7006652"
-    print(result.context.current_step) 
+    #method to extract final result
+    def extract_final_result(self,event:Event)-> str:
+      for item in event.content:
+        if isinstance(item, Message) and item.role == "assistant":
+            return item.content
+      return None
+
+
+
+result = asyncio(Agent.agent.run("What is 1234 * 5678?"))
+print(result.output)                      # "7006652"
+print(result.context.current_step) 
+
+
+
+
+
 
       
 
