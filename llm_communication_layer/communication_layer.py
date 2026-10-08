@@ -1,5 +1,5 @@
 ### this file is the communication layer between LLMs and tools
-from pydantic import BaseModel,Field
+from pydantic import BaseModel,Field, ConfigDict
 from typing import List,Dict,Optional,Any
 from litellm import acompletion
 from models.model import ContentItem, BaseTool, Message, ToolCall, ToolResult
@@ -8,6 +8,7 @@ import json
     ##create lllm request class
 class LLMRequest(BaseModel):
     """Request object for LLM calls."""
+    model_config = ConfigDict(arbitrary_types_allowed=True)
     instructions: List[str] = Field(default_factory=list) #hold system prompt fragments
     contents: List[ContentItem] = Field(default_factory=list) ##this stores the content history as content items
     tools: List[BaseTool] = Field(default_factory=list) ##list all tools as BaseTool instances
@@ -51,7 +52,7 @@ class LlmClient:
                 return LlmResponse(error_message=str(e))
 
 
-        def _build_messages(self, request: LlmRequest) -> List[dict]:
+        def _build_messages(self, request: LLMRequest) -> List[dict]:
             """Convert LlmRequest to API message format."""
             messages = []
 
